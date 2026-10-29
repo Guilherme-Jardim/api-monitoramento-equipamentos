@@ -1,0 +1,53 @@
+# Padrao (SQLite):            docker compose up --build
+# Com PostgreSQL (opcional):  docker compose --profile postgres up --build app-postgres
+services:
+  app:
+    build:
+      context: .
+      args:
+        DB_PROVIDER: sqlite
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: file:/data/app.db
+      JWT_SECRET: ${JWT_SECRET:-troque-este-segredo-em-producao}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1h}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@exemplo.com}
+    volumes:
+      - dados:/data
+
+  app-postgres:
+    profiles: ["postgres"]
+    build:
+      context: .
+      args:
+        DB_PROVIDER: postgresql
+    ports:
+      - "3001:3000"
+    environment:
+      DATABASE_URL: postgresql://monitoramento:monitoramento@db:5432/monitoramento
+      JWT_SECRET: ${JWT_SECRET:-troque-este-segredo-em-producao}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1h}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@exemplo.com}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    profiles: ["postgres"]
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: monitoramento
+      POSTGRES_PASSWORD: monitoramento
+      POSTGRES_DB: monitoramento
+    volumes:
+      - pgdados:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U monitoramento"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  dados:
+  pgdados:
