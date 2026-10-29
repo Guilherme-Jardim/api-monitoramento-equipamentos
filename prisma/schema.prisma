@@ -1,0 +1,62 @@
+// Para PostgreSQL troque provider para "postgresql" e ajuste DATABASE_URL (veja README).
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Papel e tipos sao strings (SQLite nao tem enum); a validacao fica nos DTOs.
+model Usuario {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  nome      String
+  senhaHash String
+  papel     String   @default("OPERADOR")
+  criadoEm  DateTime @default(now())
+}
+
+model Equipamento {
+  id           String    @id @default(uuid())
+  nome         String
+  tipo         String
+  fabricante   String?
+  enderecoIp   String?   @unique
+  localizacao  String?
+  unidade      String?
+  limiteMin    Float?
+  limiteMax    Float?
+  ativo        Boolean   @default(true)
+  criadoEm     DateTime  @default(now())
+  atualizadoEm DateTime  @updatedAt
+  leituras     Leitura[]
+  alertas      Alerta[]
+}
+
+model Leitura {
+  id            String      @id @default(uuid())
+  equipamentoId String
+  equipamento   Equipamento @relation(fields: [equipamentoId], references: [id], onDelete: Cascade)
+  valor         Float
+  registradaEm  DateTime    @default(now())
+  alertas       Alerta[]
+
+  @@index([equipamentoId, registradaEm])
+}
+
+model Alerta {
+  id            String      @id @default(uuid())
+  equipamentoId String
+  equipamento   Equipamento @relation(fields: [equipamentoId], references: [id], onDelete: Cascade)
+  leituraId     String
+  leitura       Leitura     @relation(fields: [leituraId], references: [id], onDelete: Cascade)
+  tipo          String
+  valor         Float
+  limite        Float
+  reconhecido   Boolean     @default(false)
+  criadoEm      DateTime    @default(now())
+
+  @@index([equipamentoId, criadoEm])
+}
